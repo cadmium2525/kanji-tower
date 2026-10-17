@@ -1,0 +1,8 @@
+{
+ "preset": "chime",
+ "pitch": 3,
+ "length": 0.8,
+ "tone": 0.2,
+ "space": 0.35,
+ "seed": 1
+}

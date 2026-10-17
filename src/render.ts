@@ -41,7 +41,7 @@ export interface DrawItem {
   outline?: string;
 }
 
-export function drawKanji(ctx: CanvasRenderingContext2D, it: DrawItem, scale: number, showHitbox = false) {
+export function drawKanji(ctx: CanvasRenderingContext2D, it: DrawItem, scale: number) {
   ctx.save();
   ctx.translate(it.x, it.y);
   ctx.rotate(it.angle);
@@ -56,19 +56,6 @@ export function drawKanji(ctx: CanvasRenderingContext2D, it: DrawItem, scale: nu
   }
   ctx.fillStyle = it.color ?? '#1c1b22';
   ctx.fill(path);
-  if (showHitbox) {
-    ctx.globalAlpha = 1;
-    ctx.lineWidth = 1 / scale;
-    ctx.strokeStyle = 'rgba(0,200,255,0.9)';
-    ctx.fillStyle = 'rgba(0,200,255,0.18)';
-    for (const part of it.glyph.shape.parts) {
-      ctx.beginPath();
-      part.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-    }
-  }
   ctx.restore();
 }
 

@@ -1,0 +1,8 @@
+{
+ "preset": "whoosh",
+ "pitch": 5,
+ "length": 0.45,
+ "tone": 0.2,
+ "space": 0.1,
+ "seed": 3
+}

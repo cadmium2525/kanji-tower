@@ -4,7 +4,7 @@ import { TowerCore } from './core';
 import { INPUT_ERRORS, validateKanji } from './kanjiInput';
 import { drawBackground, drawKanji, drawPedestal, drawRuler, type Camera, type DrawItem } from './render';
 import { transformedBounds, WORLD } from './physics';
-import { Sfx } from './audio';
+import { Sound } from './audio';
 import { loadBest, loadSettings, saveBest, saveSettings, type BestRecord, type Settings } from './storage';
 import { canvasToBlob, downloadBlob, drawTowerFit, renderResultImage, shareText } from './result';
 
@@ -21,8 +21,9 @@ let composing = false;
 let overTimer = 0;
 let shake = 0;
 let newRecordToasted = false;
-const sfx = new Sfx();
-sfx.muted = settings.mute;
+const sfx = new Sound(import.meta.env.BASE_URL);
+sfx.seOn = settings.se;
+sfx.bgmOn = settings.bgm;
 
 const ROT_STEP = Math.PI / 12; // 15°
 const MOVE_SPEED = 260; // 単位/秒
@@ -108,6 +109,7 @@ function updateTitleBest() {
 
 async function startGame() {
   sfx.unlock();
+  sfx.start();
   showScreen('game');
   resize();
   setStatus('フォント読み込み中…');
@@ -135,6 +137,7 @@ function newGame() {
   bestSnapshot = [];
   shake = 0;
   newRecordToasted = false;
+  sfx.bgm(true);
   $('over').classList.add('hidden');
   input.value = '';
   input.classList.remove('invalid');
@@ -242,37 +245,64 @@ function bindHold(id: string, key: keyof typeof held, onTap: () => void) {
 
 bindHold('btnLeft', 'left', () => core?.move(-8));
 bindHold('btnRight', 'right', () => core?.move(8));
-bindHold('btnRotL', 'rotL', () => core?.rotate(-ROT_STEP));
-bindHold('btnRotR', 'rotR', () => core?.rotate(ROT_STEP));
+bindHold('btnRotL', 'rotL', () => rotateStep(-1));
+bindHold('btnRotR', 'rotR', () => rotateStep(1));
+
+function rotateStep(dir: number) {
+  if (!core || core.phase !== 'aim') return;
+  core.rotate(dir * ROT_STEP);
+  sfx.rotate();
+}
 
 const btnDrop = $('btnDrop');
 btnDrop.addEventListener('pointerdown', (e) => e.preventDefault());
 btnDrop.addEventListener('click', tryDrop);
 $('btnRetry').addEventListener('pointerdown', (e) => e.preventDefault());
-$('btnRetry').addEventListener('click', () => newGame());
-$('btnAgain').addEventListener('click', () => newGame());
+$('btnRetry').addEventListener('click', () => {
+  sfx.tap();
+  newGame();
+});
+$('btnAgain').addEventListener('click', () => {
+  sfx.tap();
+  newGame();
+});
 $('btnHome').addEventListener('click', () => {
+  sfx.tap();
+  sfx.bgm(false);
   clearTimeout(overTimer);
   core = null;
   showScreen('title');
 });
 $('btnToTitle').addEventListener('click', () => {
+  sfx.tap();
+  sfx.bgm(false);
   core = null;
   showScreen('title');
 });
 $('btnSingle').addEventListener('click', () => void startGame());
-$('btnHowTo').addEventListener('click', () => $('howto').classList.remove('hidden'));
-$('btnSettings').addEventListener('click', () => openSettings());
+$('btnHowTo').addEventListener('click', () => {
+  sfx.unlock();
+  sfx.tap();
+  $('howto').classList.remove('hidden');
+});
+$('btnSettings').addEventListener('click', () => {
+  sfx.unlock();
+  sfx.tap();
+  openSettings();
+});
 document.querySelectorAll('.overlay .close').forEach((b) =>
-  b.addEventListener('click', () => (b.closest('.overlay') as HTMLElement).classList.add('hidden')),
+  b.addEventListener('click', () => {
+    sfx.tap();
+    (b.closest('.overlay') as HTMLElement).classList.add('hidden');
+  }),
 );
 
 // ---------- 設定 ----------
 const optMap: [string, keyof Settings][] = [
-  ['optMute', 'mute'],
+  ['optBgm', 'bgm'],
+  ['optSe', 'se'],
   ['optMotion', 'reduceMotion'],
   ['optReuse', 'allowReuse'],
-  ['optHitbox', 'showHitbox'],
 ];
 function openSettings() {
   for (const [id, k] of optMap) $<HTMLInputElement>(id).checked = settings[k];
@@ -281,7 +311,8 @@ function openSettings() {
 for (const [id, k] of optMap) {
   $<HTMLInputElement>(id).addEventListener('change', (e) => {
     settings = { ...settings, [k]: (e.target as HTMLInputElement).checked };
-    sfx.muted = settings.mute;
+    sfx.seOn = settings.se;
+    sfx.setBgmEnabled(settings.bgm);
     saveSettings(settings);
   });
 }
@@ -322,11 +353,11 @@ window.addEventListener('keydown', (e) => {
       break;
     case 'q':
     case 'Q':
-      if (!inInput) core?.rotate(-ROT_STEP);
+      if (!inInput) rotateStep(-1);
       break;
     case 'e':
     case 'E':
-      if (!inInput) core?.rotate(ROT_STEP);
+      if (!inInput) rotateStep(1);
       break;
     case 'r':
     case 'R':
@@ -347,6 +378,7 @@ window.addEventListener('keyup', (e) => {
 });
 window.addEventListener('blur', () => {
   held.left = held.right = held.rotL = held.rotR = false;
+  sfx.pause(document.hidden);
 });
 
 // ---------- ドラッグで移動 ----------
@@ -373,6 +405,7 @@ function onSettle(heightM: number) {
   if (best && heightM > best.height && !newRecordToasted) {
     newRecordToasted = true;
     toast('自己ベスト更新中！', true);
+    sfx.record();
   }
   setStatus('次の漢字を入力して落とそう');
   if (input.value) onInputChanged();
@@ -415,6 +448,7 @@ function showGameOver(g: TowerCore, reason: 'fell' | 'timeout') {
   $('overCount').textContent = String(g.placed);
   $('overBest').textContent = (best?.height ?? 0).toFixed(1);
   $('overNew').classList.toggle('hidden', !isNew);
+  sfx.gameOver();
   $('overChars').textContent = chars.join(' ');
   const oc = $<HTMLCanvasElement>('overTower');
   const octx = oc.getContext('2d')!;
@@ -608,7 +642,6 @@ function draw(now: number) {
           outline: 'rgba(255,255,255,0.75)',
         },
         cam.scale,
-        settings.showHitbox,
       );
     }
     if (core.phase === 'aim') drawPreview(now);
@@ -650,7 +683,6 @@ function drawPreview(now: number) {
         outline: 'rgba(255,255,255,0.9)',
       },
       s,
-      settings.showHitbox,
     );
   } else {
     // 入力待ちの枠（100×100の論理文字枠）
@@ -687,6 +719,9 @@ requestAnimationFrame(frame);
 (window as unknown as { __kt: unknown }).__kt = {
   get core() {
     return core;
+  },
+  get sound() {
+    return sfx;
   },
   newGame,
 };

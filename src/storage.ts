@@ -6,10 +6,10 @@ export interface BestRecord {
 }
 
 export interface Settings {
-  mute: boolean;
+  bgm: boolean;
+  se: boolean;
   reduceMotion: boolean;
   allowReuse: boolean;
-  showHitbox: boolean;
 }
 
 const KEY = 'kanjiTower.v1';
@@ -45,7 +45,15 @@ export function saveBest(b: BestRecord) {
 
 export function loadSettings(): Settings {
   const reduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  return { mute: false, reduceMotion: reduce, allowReuse: false, showHitbox: false, ...read().settings };
+  const saved = (read().settings ?? {}) as Partial<Settings> & { mute?: boolean; showHitbox?: boolean };
+  // 旧版の「ミュート」設定を引き継ぐ
+  const muted = saved.mute === true;
+  return {
+    bgm: saved.bgm ?? !muted,
+    se: saved.se ?? !muted,
+    reduceMotion: saved.reduceMotion ?? reduce,
+    allowReuse: saved.allowReuse ?? false,
+  };
 }
 
 export function saveSettings(s: Settings) {

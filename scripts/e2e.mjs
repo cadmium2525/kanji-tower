@@ -19,7 +19,8 @@ const check = (name, ok, extra = '') => {
 };
 
 const launch = { executablePath: process.env.CHROMIUM || undefined };
-const browser = await chromium.launch(launch).catch(() => chromium.launch({ executablePath: '/opt/pw-browsers/chromium' }));
+launch.args = ['--autoplay-policy=no-user-gesture-required'];
+const browser = await chromium.launch(launch).catch(() => chromium.launch({ ...launch, executablePath: '/opt/pw-browsers/chromium' }));
 const ctx = await browser.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
 const page = await ctx.newPage();
 const errors = [];
@@ -32,6 +33,10 @@ await page.waitForFunction(() => document.getElementById('loadStatus').textConte
 await page.screenshot({ path: `${OUT}/01-title.png` });
 await page.click('#btnSingle');
 await page.waitForFunction(() => window.__kt.core);
+
+await page.waitForFunction(() => window.__kt.sound.loaded === 12, null, { timeout: 20000 }).catch(() => {});
+check('BGM・効果音を読み込む', await page.evaluate(() => window.__kt.sound.loaded === 12), `${await page.evaluate(() => window.__kt.sound.loaded)}/12`);
+check('ゲーム開始でBGMが流れる', await page.evaluate(() => window.__kt.sound.bgmPlaying));
 
 const phase = () => page.evaluate(() => window.__kt.core.phase);
 async function waitAim(timeout = 20000) {
@@ -113,6 +118,7 @@ if (st.phase !== 'over') {
 }
 await page.waitForSelector('#over:not(.hidden)', { timeout: 20000 });
 check('台から落ちるとゲームオーバー', true);
+check('ゲームオーバーでBGMが止まる', await page.evaluate(() => !window.__kt.sound.bgmPlaying));
 await page.screenshot({ path: `${OUT}/06-gameover.png` });
 
 // 6. 結果画像PNG
@@ -122,6 +128,7 @@ check('結果PNGを保存できる', dl.suggestedFilename().endsWith('.png'));
 
 // 7. 1タップでリトライ
 await page.click('#btnAgain');
+check('リトライでBGMが再開', await page.evaluate(() => window.__kt.sound.bgmPlaying));
 check('1タップでリトライ', await page.evaluate(() => window.__kt.core.phase === 'aim' && window.__kt.core.bodies.length === 0 && document.getElementById('over').classList.contains('hidden')));
 
 // 8. 自己ベストがリロード後も残る
