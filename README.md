@@ -75,8 +75,8 @@ GitHub Pages へは `.github/workflows/pages.yml` が push のたびに自動で
 3. 「構築 → Firestore Database → データベースを作成」（本番環境モード、場所は `asia-northeast1` など）
 4. Firestore の「ルール」タブに `firebase/firestore.rules` の中身を貼り付けて「公開」
 5. 「プロジェクトの設定 → マイアプリ → ウェブアプリを追加（</>）」で表示される `apiKey` と `projectId` を、
-   GitHub の **Settings → Secrets and variables → Actions → Variables** に `FIREBASE_API_KEY` / `FIREBASE_PROJECT_ID` として登録
-   （または `.env.production` に `VITE_FIREBASE_API_KEY=...` / `VITE_FIREBASE_PROJECT_ID=...` と書いてコミット。Web API キーは公開前提の値です）
+   `.env.production` に `VITE_FIREBASE_API_KEY=...` / `VITE_FIREBASE_PROJECT_ID=...` として書いてコミット
+   （このリポジトリでは `.env.production` に設定済み。Web API キーは公開前提の値です）
 6. もう一度 push（または Actions の「Deploy to GitHub Pages」を手動実行）すると有効になります
 
 設定がないビルドでは、ランキングは「準備中」と表示され、登録欄は出ません。
