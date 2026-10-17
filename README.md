@@ -1,5 +1,7 @@
 # 漢字タワー
 
+**▶ プレイ：https://cadmium2525.github.io/kanji-tower/**
+
 好きな漢字を1文字入力して落とし、**字形そのものの当たり判定**で積み上げていくブラウザゲームです（シングルモード）。
 
 - 漢字はブロックではなく、フォントの輪郭（外周・穴・離れた画）どおりの剛体として落ちます。
@@ -23,6 +25,8 @@ npm run dev        # 開発サーバー → 表示されたURL（http://localhos
 npm run build      # 型チェック + dist/ に静的ファイルを出力
 npm run preview    # dist/ をローカル配信（http://localhost:4173/）
 ```
+
+GitHub Pages へは `.github/workflows/pages.yml` が push のたびに自動でビルド・テストし、`gh-pages` ブランチへ公開します（リポジトリの Settings → Pages で Source を「Deploy from a branch / gh-pages / (root)」にしておく）。
 
 `dist/` フォルダをそのまま GitHub Pages / Cloudflare Pages / Netlify などの**無料**静的ホスティングに置けば公開できます（相対パスで出力しているのでサブパスでも動きます）。
 
