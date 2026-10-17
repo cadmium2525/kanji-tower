@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#76b6ee" />
+    <meta name="description" content="好きな漢字を入力して落とし、物理演算で積み上げるブラウザゲーム" />
+    <title>漢字タワー</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2376b6ee'/%3E%3Ctext x='50' y='74' font-size='68' text-anchor='middle' font-family='serif' font-weight='900'%3E塔%3C/text%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- S01 タイトル -->
+      <section id="title" class="screen">
+        <canvas id="titleCv" aria-hidden="true"></canvas>
+        <div class="title-sky">
+          <h1 class="logo">漢字<br />タワー</h1>
+          <p class="tagline">好きな漢字で、どこまで積める？</p>
+          <div class="title-buttons">
+            <button id="btnSingle" class="btn btn-green btn-big">ひとりで遊ぶ</button>
+            <button id="btnBattle" class="btn btn-orange btn-big" disabled aria-disabled="true">
+              対戦する <span class="soon">準備中</span>
+            </button>
+          </div>
+          <p id="loadStatus" class="load-status" role="status">フォント読み込み中…</p>
+          <p id="titleBest" class="title-best"></p>
+          <div class="title-icons">
+            <button id="btnHowTo" class="icon-btn"><span class="ico">?</span>遊び方</button>
+            <button id="btnSettings" class="icon-btn"><span class="ico">⚙</span>設定</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- S02 シングル -->
+      <section id="game" class="screen hidden">
+        <div id="stage">
+          <canvas id="cv" aria-label="漢字タワーのプレイ画面"></canvas>
+          <div class="hud">
+            <div class="panel">
+              <div class="lbl">高さ</div>
+              <div class="val"><b id="hudHeight">0.0</b> m</div>
+              <div class="lbl">文字数 <b id="hudCount">0</b></div>
+            </div>
+            <div class="hud-right">
+              <div class="panel small">
+                <div class="lbl">自己ベスト</div>
+                <div class="val2"><b id="hudBest">0.0</b> m</div>
+              </div>
+              <button id="btnHome" class="hud-btn" aria-label="タイトルに戻る">✕</button>
+            </div>
+          </div>
+          <div id="toast" class="toast" role="alert" aria-live="assertive"></div>
+          <div id="status" class="status" aria-live="polite"></div>
+        </div>
+        <div id="controls">
+          <div class="row">
+            <input
+              id="kanji"
+              type="text"
+              inputmode="text"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              enterkeyhint="done"
+              placeholder="次の漢字を入力…"
+              aria-label="落とす漢字（1文字）"
+            />
+            <button id="btnDrop" class="btn btn-blue">落とす</button>
+          </div>
+          <div class="row">
+            <button id="btnLeft" class="ctl" aria-label="左へ移動">◀</button>
+            <button id="btnRotL" class="ctl" aria-label="左回転">⟲</button>
+            <button id="btnRotR" class="ctl" aria-label="右回転">⟳</button>
+            <button id="btnRight" class="ctl" aria-label="右へ移動">▶</button>
+            <button id="btnRetry" class="ctl retry" aria-label="リトライ">↻</button>
+          </div>
+          <div id="used" class="used" aria-label="使用済みの漢字"></div>
+        </div>
+
+        <!-- S03 ゲームオーバー -->
+        <div id="over" class="overlay hidden" role="dialog" aria-labelledby="overTitle">
+          <div class="over-card">
+            <h2 id="overTitle">ゲームオーバー</h2>
+            <p id="overReason" class="over-reason"></p>
+            <div class="over-main">
+              <canvas id="overTower" width="300" height="400"></canvas>
+              <div class="over-stats">
+                <div class="lbl">最高高度</div>
+                <div class="big"><b id="overHeight">0.0</b> m</div>
+                <div class="lbl">文字数</div>
+                <div class="big"><b id="overCount">0</b></div>
+                <div id="overNew" class="new-record hidden">自己ベスト更新！</div>
+              </div>
+            </div>
+            <div class="over-chars" id="overChars"></div>
+            <div class="over-best">👑 自己ベスト <b id="overBest">0.0</b> m</div>
+            <button id="btnAgain" class="btn btn-blue btn-big">もう一度遊ぶ</button>
+            <div class="row2">
+              <button id="btnSave" class="btn btn-gray">画像を保存</button>
+              <button id="btnShare" class="btn btn-gray">シェア</button>
+              <button id="btnX" class="btn btn-dark">Xに投稿</button>
+            </div>
+            <button id="btnToTitle" class="btn btn-ghost">タイトルに戻る</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 遊び方 -->
+      <div id="howto" class="overlay hidden" role="dialog" aria-labelledby="howtoTitle">
+        <div class="modal">
+          <h2 id="howtoTitle">遊び方</h2>
+          <ol>
+            <li>入力欄に<b>漢字を1文字</b>入力します（変換を確定してから）。</li>
+            <li>◀ ▶ で位置、⟲ ⟳ で角度を決めます。画面を左右にドラッグしても動かせます。</li>
+            <li><b>落とす</b>（または Enter）で落下。止まったら次の漢字へ。</li>
+            <li>漢字の<b>形そのもの</b>が当たり判定です。「凹」のくぼみや「田」のすき間も再現されます。</li>
+            <li>どれかの漢字が台から落ちたらゲームオーバー。<b>同じ漢字は1回しか使えません。</b></li>
+          </ol>
+          <p class="keys">PC：← → 移動 ／ Q E 回転 ／ Space・Enter 落下 ／ R リトライ</p>
+          <button class="btn btn-blue close">閉じる</button>
+        </div>
+      </div>
+
+      <!-- 設定 -->
+      <div id="settings" class="overlay hidden" role="dialog" aria-labelledby="settingsTitle">
+        <div class="modal">
+          <h2 id="settingsTitle">設定</h2>
+          <label class="opt"><input type="checkbox" id="optMute" /> 効果音をミュート</label>
+          <label class="opt"><input type="checkbox" id="optMotion" /> 動きを抑える（画面揺れ・雲の流れを停止）</label>
+          <label class="opt"><input type="checkbox" id="optReuse" /> 同じ漢字の再使用を許可（記録は別扱いにならないので注意）</label>
+          <label class="opt"><input type="checkbox" id="optHitbox" /> 当たり判定を表示（デバッグ）</label>
+          <p class="license">
+            フォント：Noto Serif JP Black（SIL Open Font License 1.1）。漢字部分のみサブセット化して同梱。
+            <a href="./fonts/OFL.txt" target="_blank" rel="noopener">ライセンス全文</a>
+          </p>
+          <button class="btn btn-blue close">閉じる</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
