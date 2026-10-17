@@ -25,6 +25,10 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+        env:
+          # ランキング用（Firebase の Web API キーは公開前提の値。リポジトリの Variables か .env.production で設定）
+          VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
       - name: Publish dist/ to gh-pages
         run: |
           cd dist

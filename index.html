@@ -26,6 +26,7 @@
           <p id="titleBest" class="title-best"></p>
           <div class="title-icons">
             <button id="btnHowTo" class="icon-btn"><span class="ico">?</span>遊び方</button>
+            <button id="btnRanking" class="icon-btn"><span class="ico">🏆</span>ランキング</button>
             <button id="btnSettings" class="icon-btn"><span class="ico">⚙</span>設定</button>
           </div>
         </div>
@@ -94,6 +95,15 @@
             </div>
             <div class="over-chars" id="overChars"></div>
             <div class="over-best">👑 自己ベスト <b id="overBest">0.0</b> m</div>
+            <form id="rankBox" class="rank-box hidden">
+              <label for="rankName" class="rank-label">ランキングに登録する名前</label>
+              <div class="rank-row">
+                <input id="rankName" type="text" maxlength="24" autocomplete="nickname" placeholder="名前（12文字まで）" />
+                <button id="btnRankSubmit" type="submit" class="btn btn-orange">登録</button>
+              </div>
+              <p id="rankMsg" class="rank-msg" aria-live="polite"></p>
+              <button id="btnRankView" type="button" class="btn-link">世界ランキングを見る</button>
+            </form>
             <button id="btnAgain" class="btn btn-blue btn-big">もう一度遊ぶ</button>
             <div class="row2">
               <button id="btnSave" class="btn btn-gray">画像を保存</button>
@@ -117,6 +127,16 @@
             <li>どれかの漢字が台から落ちたらゲームオーバー。<b>同じ漢字は1回しか使えません。</b></li>
           </ol>
           <p class="keys">PC：← → 移動 ／ Q E 回転 ／ Space・Enter 落下 ／ R リトライ</p>
+          <button class="btn btn-blue close">閉じる</button>
+        </div>
+      </div>
+
+      <!-- ランキング -->
+      <div id="ranking" class="overlay hidden" role="dialog" aria-labelledby="rankingTitle">
+        <div class="modal">
+          <h2 id="rankingTitle">世界ランキング</h2>
+          <p class="rank-sub">シングルモードの最高高度・上位50人</p>
+          <div id="rankList" class="rank-list" aria-live="polite"></div>
           <button class="btn btn-blue close">閉じる</button>
         </div>
       </div>

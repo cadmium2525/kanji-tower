@@ -59,10 +59,31 @@ GitHub Pages へは `.github/workflows/pages.yml` が push のたびに自動で
 - スマホ縦持ち優先レイアウト、タップ領域 44px 以上、動きを抑える設定。
 - タブ非表示中は物理を止め、復帰時に時間を飛ばさない。画面サイズ変更・回転に追従。低性能端末では描画解像度を自動で下げる（物理の固定更新は維持）。
 
+## 世界ランキング（シングルモード）
+
+ゲームオーバー画面で名前を入れて「登録」すると、最高高度が世界ランキングに載ります（タイトルの「ランキング」で上位50人を表示）。
+
+- 仕組み：Firebase の**匿名ログイン**＋**Firestore**（無料の Spark プラン、クレジットカード不要）。SDK は使わず REST API で通信。
+- 1人（1端末）1件。自己ベストを更新したときだけ書き換わります。
+- 不正対策（`firebase/firestore.rules`）：本人の記録しか書けない、記録は上がるときだけ更新、10秒以内の連続更新は拒否、名前は1〜12文字、高さは文字数×1.5m以下・300m以下、余計な項目は拒否。
+  ただしブラウザで計算した記録を送る方式なので、改造したクライアントからの「ありえる範囲の嘘の記録」までは防げません。
+
+### 有効にする手順（初回のみ・0円）
+
+1. https://console.firebase.google.com/ で「プロジェクトを追加」（Google アナリティクスは不要）
+2. 「構築 → Authentication → 始める → ログイン方法」で **匿名** を有効にする
+3. 「構築 → Firestore Database → データベースを作成」（本番環境モード、場所は `asia-northeast1` など）
+4. Firestore の「ルール」タブに `firebase/firestore.rules` の中身を貼り付けて「公開」
+5. 「プロジェクトの設定 → マイアプリ → ウェブアプリを追加（</>）」で表示される `apiKey` と `projectId` を、
+   GitHub の **Settings → Secrets and variables → Actions → Variables** に `FIREBASE_API_KEY` / `FIREBASE_PROJECT_ID` として登録
+   （または `.env.production` に `VITE_FIREBASE_API_KEY=...` / `VITE_FIREBASE_PROJECT_ID=...` と書いてコミット。Web API キーは公開前提の値です）
+6. もう一度 push（または Actions の「Deploy to GitHub Pages」を手動実行）すると有効になります
+
+設定がないビルドでは、ランキングは「準備中」と表示され、登録欄は出ません。
+
 ## 未完成・対象外
 
 - **対戦モード**（ローカル2人／オンライン）：タイトルに「準備中」と表示。
-- ランキング、オンライン記録。
 - X への画像自動添付（仕様どおり保証しない。Web Share 対応端末では画像付き共有可）。
 - 異体字セレクタ付きの入力（仕様どおり非対応として拒否）。
 
@@ -92,16 +113,19 @@ BGM は曲の長さ（65.45秒）で切り、はみ出た残響を曲の頭に�
 ```bash
 npm test           # ユニット・物理テスト（Vitest, Node上でフォントを実際に読み込んで検証）
 npm run build && npm run test:e2e   # ブラウザ動作テスト（Playwright + Chromium、スクリーンショットを screenshots/ に保存）
+npm run test:ranking       # ランキングとセキュリティルールのテスト（Firebase エミュレーター。要 Java。firebase-tools は npx で自動取得）
+npm run test:ranking-e2e   # エミュレーターに接続したビルドで、登録〜一覧表示までブラウザテスト
 ```
 
 最新の結果（2026-10-17）:
 
-- `npm test`：**46 / 46 合格**
+- `npm run test:ranking`：**6 / 6 合格**（初回登録と順位、低い記録・連続更新の拒否、順位の変動、不正データ6種の拒否、名前の正規化）
+- `npm test`：**47 / 47 合格**
   - 入力検証（ひらがな・絵文字・複数文字・異体字セレクタの拒否、NFC正規化）
   - 代表21字（一二三人山川田口日木凹凸品森国回囲園図固龍）の凸分割・文字枠
   - 田の4つの穴、回の内外の空間、凹のくぼみ、川の離れた画が当たり判定に反映されること
   - 「一 山 人 田 凹 国 回 龍」の着地と安定、積み上げ、再使用禁止、落下・崩壊でのゲームオーバー、接地なしタイムアウト、性能
-- `npm run test:e2e`：**22 / 22 合格**（BGM・効果音の読み込み、BGM の開始・停止・再開、入力拒否、欠字検知、凹への入り込み、積み上げ、ゲームオーバー、PNG保存、リトライボタン・1タップリトライ、リロード後の自己ベスト、キーボード操作、リサイズ・タブ復帰、コンソールエラーなし）
+- `npm run test:e2e`：**23 / 23 合格**、`npm run test:ranking-e2e`：**25 / 25 合格**（ランキング登録・一覧表示、BGM・効果音の読み込み、BGM の開始・停止・再開、入力拒否、欠字検知、凹への入り込み、積み上げ、ゲームオーバー、PNG保存、リトライボタン・1タップリトライ、リロード後の自己ベスト、キーボード操作、リサイズ・タブ復帰、コンソールエラーなし）
 
 スクリーンショット: [docs/screenshots](docs/screenshots)
 
@@ -120,6 +144,8 @@ src/audio.ts        BGM・効果音の再生
 audio-src/          BGM・効果音の元データ（かなでる形式の JSON）
 public/audio/       書き出した MP3
 src/storage.ts      自己ベスト・設定の保存
+src/ranking.ts      世界ランキング（Firebase REST）
+firebase/           Firestore のセキュリティルール
 tests/              Vitest
 scripts/e2e.mjs     Playwright によるブラウザテスト
 ```

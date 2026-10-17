@@ -59,3 +59,21 @@ export function loadSettings(): Settings {
 export function saveSettings(s: Settings) {
   write({ ...read(), settings: s });
 }
+
+const NAME_KEY = 'kanjiTower.name';
+
+export function loadName(): string {
+  try {
+    return localStorage.getItem(NAME_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+export function saveName(name: string) {
+  try {
+    localStorage.setItem(NAME_KEY, name);
+  } catch {
+    /* 保存できなくても登録は続行 */
+  }
+}

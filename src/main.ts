@@ -5,7 +5,8 @@ import { INPUT_ERRORS, validateKanji } from './kanjiInput';
 import { drawBackground, drawKanji, drawPedestal, drawRuler, type Camera, type DrawItem } from './render';
 import { transformedBounds, WORLD } from './physics';
 import { Sound } from './audio';
-import { loadBest, loadSettings, saveBest, saveSettings, type BestRecord, type Settings } from './storage';
+import { loadBest, loadName, loadSettings, saveBest, saveName, saveSettings, type BestRecord, type Settings } from './storage';
+import { cleanName, rankingFromEnv, type SubmitResult } from './ranking';
 import { canvasToBlob, downloadBlob, drawTowerFit, renderResultImage, shareText } from './result';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -21,6 +22,7 @@ let composing = false;
 let overTimer = 0;
 let shake = 0;
 let newRecordToasted = false;
+const ranking = rankingFromEnv();
 const sfx = new Sound(import.meta.env.BASE_URL);
 sfx.seOn = settings.se;
 sfx.bgmOn = settings.bgm;
@@ -285,6 +287,11 @@ $('btnHowTo').addEventListener('click', () => {
   sfx.tap();
   $('howto').classList.remove('hidden');
 });
+$('btnRanking').addEventListener('click', () => {
+  sfx.unlock();
+  sfx.tap();
+  void openRanking();
+});
 $('btnSettings').addEventListener('click', () => {
   sfx.unlock();
   sfx.tap();
@@ -323,6 +330,7 @@ window.addEventListener('keydown', (e) => {
   if (e.isComposing || e.keyCode === 229) return;
   const inInput = document.activeElement === input;
   if (!$('over').classList.contains('hidden')) {
+    if (document.activeElement === $('rankName')) return;
     if (e.key === 'Enter' || e.key === 'r' || e.key === 'R' || e.key === ' ') {
       e.preventDefault();
       newGame();
@@ -448,6 +456,7 @@ function showGameOver(g: TowerCore, reason: 'fell' | 'timeout') {
   $('overCount').textContent = String(g.placed);
   $('overBest').textContent = (best?.height ?? 0).toFixed(1);
   $('overNew').classList.toggle('hidden', !isNew);
+  setupRankBox(g);
   sfx.gameOver();
   $('overChars').textContent = chars.join(' ');
   const oc = $<HTMLCanvasElement>('overTower');
@@ -505,6 +514,92 @@ $('btnX').addEventListener('click', () => {
   const url = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText(resultData()));
   window.open(url, '_blank', 'noopener');
 });
+
+// ---------- ランキング ----------
+let rankTarget: { height: number; count: number; chars: string } | null = null;
+
+function setupRankBox(g: TowerCore) {
+  const box = $('rankBox');
+  const show = !!ranking && g.placed > 0;
+  box.classList.toggle('hidden', !show);
+  if (!show) return;
+  rankTarget = { height: g.bestHeight / 100, count: g.placed, chars: g.usedChars().join('') };
+  $<HTMLInputElement>('rankName').value = loadName();
+  $('rankMsg').textContent = '';
+  $<HTMLButtonElement>('btnRankSubmit').disabled = false;
+}
+
+const RANK_MSG: Record<Exclude<SubmitResult, { ok: true }>['reason'], string> = {
+  'not-better': '登録済みの記録の方が高いので、更新しませんでした',
+  'too-soon': '少し待ってから、もう一度登録してください',
+  network: '通信できませんでした。電波の良い所でもう一度どうぞ',
+  disabled: 'ランキングは準備中です',
+};
+
+$('rankBox').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!ranking || !rankTarget) return;
+  const name = cleanName($<HTMLInputElement>('rankName').value);
+  const msg = $('rankMsg');
+  if (!name) {
+    msg.textContent = '名前を入力してください';
+    sfx.error();
+    return;
+  }
+  saveName(name);
+  const btn = $<HTMLButtonElement>('btnRankSubmit');
+  btn.disabled = true;
+  msg.textContent = '登録中…';
+  const r = await ranking.submit(name, rankTarget.height, rankTarget.count, rankTarget.chars);
+  if (r.ok) {
+    msg.textContent = r.rank ? `世界 ${r.rank} 位に登録しました！` : '登録しました！';
+    sfx.record();
+  } else {
+    msg.textContent = RANK_MSG[r.reason];
+    btn.disabled = r.reason === 'not-better';
+    if (r.reason !== 'not-better') sfx.error();
+  }
+});
+$('btnRankView').addEventListener('click', () => {
+  sfx.tap();
+  void openRanking();
+});
+
+async function openRanking() {
+  const list = $('rankList');
+  $('ranking').classList.remove('hidden');
+  const note = (t: string) => {
+    list.textContent = '';
+    const p = document.createElement('p');
+    p.className = 'rank-empty';
+    p.textContent = t;
+    list.appendChild(p);
+  };
+  if (!ranking) return note('ランキングは準備中です');
+  note('読み込み中…');
+  try {
+    const rows = await ranking.top(50);
+    if (!rows.length) return note('まだ記録がありません。最初の登録者になろう！');
+    list.textContent = '';
+    rows.forEach((r, i) => {
+      const row = document.createElement('div');
+      row.className = 'row' + (r.uid === ranking.uid ? ' me' : '');
+      const cell = (cls: string, text: string) => {
+        const el = document.createElement('span');
+        el.className = cls;
+        el.textContent = text;
+        row.appendChild(el);
+      };
+      cell('no', String(i + 1));
+      cell('nm', r.name);
+      cell('ht', `${r.height.toFixed(1)} m`);
+      cell('ch', `${r.count}文字　${r.chars}`);
+      list.appendChild(row);
+    });
+  } catch {
+    note('ランキングを読み込めませんでした');
+  }
+}
 
 // ---------- HUD ----------
 function updateHud() {

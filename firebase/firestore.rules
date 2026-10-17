@@ -1,0 +1,33 @@
+rules_version = '2';
+// 漢字タワー：シングルモードのグローバルランキング
+// scores/{uid} … 匿名ログインした各プレイヤーの自己ベスト1件
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /scores/{uid} {
+      allow read: if true;
+      allow create: if isOwner(uid) && valid();
+      // 更新は記録が伸びたときだけ。連投防止に10秒あける
+      allow update: if isOwner(uid) && valid()
+        && request.resource.data.height > resource.data.height
+        && request.time > resource.data.updatedAt + duration.value(10, 's');
+      allow delete: if false;
+    }
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function valid() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['name', 'height', 'count', 'chars', 'updatedAt'])
+        && d.keys().hasAll(['name', 'height', 'count', 'chars', 'updatedAt'])
+        && d.name is string && d.name.size() >= 1 && d.name.size() <= 12
+        && d.height is number && d.height > 0 && d.height <= 300
+        && d.count is int && d.count >= 1 && d.count <= 1000
+        // 1文字あたり高さ1.5mを超えることはない
+        && d.height <= d.count * 1.5
+        && d.chars is string && d.chars.size() >= d.count && d.chars.size() <= 2000
+        && d.updatedAt == request.time;
+    }
+  }
+}

@@ -121,6 +121,24 @@ check('台から落ちるとゲームオーバー', true);
 check('ゲームオーバーでBGMが止まる', await page.evaluate(() => !window.__kt.sound.bgmPlaying));
 await page.screenshot({ path: `${OUT}/06-gameover.png` });
 
+// 5b. グローバルランキング（RANKING_E2E=1 のとき：エミュレーターに接続したビルドで実行）
+if (process.env.RANKING_E2E) {
+  check('ゲームオーバー画面に登録欄', await page.isVisible('#rankBox'));
+  await page.fill('#rankName', 'テスト太郎');
+  await page.click('#btnRankSubmit');
+  await page.waitForFunction(() => /位に登録|できません|待って|高い/.test(document.getElementById('rankMsg').textContent), null, { timeout: 15000 });
+  const msg = await page.textContent('#rankMsg');
+  check('ランキングに登録できる', msg.includes('位に登録'), msg);
+  await page.screenshot({ path: `${OUT}/09-rank-submit.png` });
+  await page.click('#btnRankView');
+  await page.waitForSelector('#rankList .row.me', { timeout: 15000 });
+  check('ランキング一覧に自分が表示される', (await page.textContent('#rankList .row.me .nm')) === 'テスト太郎');
+  await page.screenshot({ path: `${OUT}/10-ranking.png` });
+  await page.click('#ranking .close');
+} else {
+  check('未設定ならランキング登録欄は出ない', !(await page.isVisible('#rankBox')));
+}
+
 // 6. 結果画像PNG
 const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#btnSave')]);
 await dl.saveAs(`${OUT}/07-result.png`);

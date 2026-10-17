@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -p . && vite build",
     "preview": "vite preview",
-    "test:e2e": "node scripts/e2e.mjs"
+    "test:e2e": "node scripts/e2e.mjs",
+    "test:ranking": "npx -y firebase-tools@15.34.0 emulators:exec --project demo-kanji \"vitest run tests/ranking.emu.test.ts\"",
+    "test:ranking-e2e": "npx -y firebase-tools@15.34.0 emulators:exec --project demo-kanji \"VITE_FIREBASE_API_KEY=demo-key VITE_FIREBASE_PROJECT_ID=demo-kanji VITE_FIREBASE_EMULATOR=127.0.0.1 vite build && RANKING_E2E=1 node scripts/e2e.mjs\""
   },
   "repository": {
     "type": "git",
