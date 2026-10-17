@@ -233,7 +233,11 @@ function bindHold(id: string, key: keyof typeof held, onTap: () => void) {
   el.addEventListener('pointerdown', (e) => {
     e.preventDefault(); // 入力欄のフォーカス（キーボード）を維持
     sfx.unlock();
-    el.setPointerCapture(e.pointerId);
+    try {
+      el.setPointerCapture(e.pointerId);
+    } catch {
+      /* 合成イベントなどで捕捉できなくても操作は続ける */
+    }
     onTap();
     held[key] = true;
     holdRotTimer = 0;
@@ -393,7 +397,11 @@ window.addEventListener('blur', () => {
 let dragX: number | null = null;
 cv.addEventListener('pointerdown', (e) => {
   dragX = e.clientX;
-  cv.setPointerCapture(e.pointerId);
+  try {
+    cv.setPointerCapture(e.pointerId);
+  } catch {
+    /* 同上 */
+  }
 });
 cv.addEventListener('pointermove', (e) => {
   if (dragX === null || !core) return;
