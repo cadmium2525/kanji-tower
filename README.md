@@ -26,7 +26,7 @@ npm run build      # 型チェック + dist/ に静的ファイルを出力
 npm run preview    # dist/ をローカル配信（http://localhost:4173/）
 ```
 
-GitHub Pages へは `.github/workflows/pages.yml` が push のたびに自動でビルド・テストし、`gh-pages` ブランチへ公開します（リポジトリの Settings → Pages で Source を「Deploy from a branch / gh-pages / (root)」にしておく）。
+GitHub Pages へは `.github/workflows/pages.yml` が push のたびに自動でビルド・テストし、`gh-pages` ブランチへ公開します（Pages の公開元は gh-pages ブランチ）。
 
 `dist/` フォルダをそのまま GitHub Pages / Cloudflare Pages / Netlify などの**無料**静的ホスティングに置けば公開できます（相対パスで出力しているのでサブパスでも動きます）。
 
